@@ -1,6 +1,9 @@
 import json
 import pymongo
 from datetime import date
+import sys
+import os
+import subprocess
 
 client = pymongo.MongoClient("mongodb://localhost:27017")
 db = client["expense_management"]
@@ -200,8 +203,6 @@ def view_spent_report():
     print("Total: ",total_spent)
 
 
-
-
 def account_transfer():
     collection = db["accounts"]
 
@@ -306,8 +307,16 @@ def start():
 try:
     while True:
         start()
+        print("Enter ^C to Quit  /*\  ENTER to Continue")
+        input()
 except KeyboardInterrupt:
-    print()
+    print("Hold on...Backup is in Process!!")
+    os.chdir("D:\Expense_Record_Management\data")
+    #os.system("backup.bat")
+
+    subprocess.check_output("backup.bat", creationflags= 0x08000000)
+    print("Done..")
+    sys.exit()
 
 
 #view_raw_db()
