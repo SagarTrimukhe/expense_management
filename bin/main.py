@@ -99,7 +99,7 @@ def enter_expense_details():
 
             ##### Storing the information in file##############################
             store_transactions(payment_modes[pay_mode],map_between_ip_and_category[category], amount, new_balance, remarks)
-            print("Enter ^C to Quit  /*\  ENTER to Continue")
+            print("Enter ^C to Dashboard  /*\  ENTER to add expenses")
             input()
 
     except KeyboardInterrupt:
@@ -132,7 +132,7 @@ def edit_account_details():
 
                 print(account_details)
                 collection.insert_one(account_details)
-                print("Enter ^C to Quit /\ Enter to add another account")
+                print("Enter ^C to Dashboard /\ Enter to add another account")
                 input()
 
         except KeyboardInterrupt:
