@@ -5,6 +5,7 @@ import sys
 import os
 import subprocess
 
+
 client = pymongo.MongoClient("mongodb://localhost:27017")
 db = client["expense_management"]
 
@@ -258,7 +259,7 @@ def view_expense_details_of_particular_day():
         print('{:20s}{:20s}{:10s}{:40s}'.format(transaction["payment_mode"],transaction["category"],str(transaction["amount"]),transaction["remarks"]))
 
 
-
+# For testing purpose only... Delete it afterwards
 def view_raw_db():
     collection = db["09_2019"]
 
@@ -311,9 +312,7 @@ try:
         input()
 except KeyboardInterrupt:
     print("Hold on...Backup is in Process!!")
-    os.chdir("D:\Expense_Record_Management\data")
-    #os.system("backup.bat")
-
+    os.chdir("..\data")
     subprocess.check_output("backup.bat", creationflags= 0x08000000)
     print("Done..")
     sys.exit()
