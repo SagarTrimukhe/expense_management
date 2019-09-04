@@ -123,16 +123,16 @@ def edit_account_details():
                                    "name": '',
                                    "balance": ''}
 
-                print("Enter account type(Savings/MF)")
+                print("Enter account type(Savings/MF) : ",end='')
                 account_details["type"] = input()
-                print("Enter account Name")
+                print("Enter account Name : ",end='')
                 account_details["name"] = input()
-                print("Enter account Balance")
+                print("Enter account Balance : ",end='')
                 account_details["balance"] = input()
 
                 print(account_details)
                 collection.insert_one(account_details)
-                print("Enter ^C to Quit /\ Enter to Continue")
+                print("Enter ^C to Quit /\ Enter to add another account")
                 input()
 
         except KeyboardInterrupt:
@@ -149,7 +149,7 @@ def edit_account_details():
         account_name = input()
 
         try:
-            print("Enter new balance")
+            print("Enter new balance: ",end='')
             new_balance = int(input())
             print(account_name,new_balance)
             collection.update_one({"name":account_name},{'$set':{"balance":new_balance}})
@@ -282,7 +282,6 @@ def start():
     print("6 - View Account details")
 
     print()
-    print("Enter ^C to Close the application")
     print("Enter your choice :: ",end='')
     choice =int(input())
 
@@ -298,8 +297,6 @@ def start():
         view_spent_report()
     elif choice == 6:
         view_account_details()
-
-    
 
     print(60*"_-")
 
@@ -317,15 +314,3 @@ except KeyboardInterrupt:
     print("Done..")
     sys.exit()
 
-
-#view_raw_db()
-
-#view_todays_expense_details()
-
-#enter_expense_details()
-
-#edit_account_details()
-
-#view_account_details()
-
-#view_spent_report()
