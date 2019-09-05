@@ -7,7 +7,7 @@ import subprocess
 
 
 client = pymongo.MongoClient("mongodb://localhost:27017")
-db = client["expense_management"]
+db = client[""]
 
 
 def store_transactions(payment_mode, category, amount, new_balance, remarks):
@@ -18,15 +18,15 @@ def store_transactions(payment_mode, category, amount, new_balance, remarks):
     month_year = today.strftime("%m_%Y")
     collection = db[month_year]
 
-    data = {"date":current_date,
-            "details":[]
+    data = {"date": current_date,
+            "details": []
             }
 
-    temp = {"payment_mode":payment_mode,
-            "category":category,
-            "amount":amount,
-            "closing_balance":new_balance,
-            "remarks":remarks}
+    temp = {"payment_mode": payment_mode,
+            "category": category,
+            "amount": amount,
+            "closing_balance": new_balance,
+            "remarks": remarks}
 
     check = collection.find_one({"date":current_date})
 
@@ -303,6 +303,8 @@ def start():
         view_spent_report()
     elif choice == 6:
         view_account_details()
+    else:
+        print("Invalid choice")
 
     print(60*"_-")
 
