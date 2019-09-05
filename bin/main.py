@@ -249,6 +249,12 @@ def view_expense_details_of_particular_day():
 
     collection = db[collection_name]
     x = collection.find_one({"date":user_date})
+    print(x)
+
+    if x == None:
+        print("No Data available. Please enter today's expenses to see the results")
+        return
+
     details = x["details"]
 
     print(20 * '*', "Today's Expense Details", 20 * '*')
