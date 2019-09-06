@@ -7,7 +7,7 @@ import subprocess
 
 
 client = pymongo.MongoClient("mongodb://localhost:27017")
-db = client[""]
+db = client["expense_management"]
 
 
 def store_transactions(payment_mode, category, amount, new_balance, remarks):
@@ -66,18 +66,36 @@ def enter_expense_details():
     payment_modes = {1: "Paytm", 2: "SBI", 3: "CASH", 4: "ICICI"}
 
     ''''''''''''''' Taking Input from user'''''''''''''''''''''
+    category = ''
+    pay_mode = ''
+    amount = 0
     try:
         while True:
             print("Select Category: ")
             print(json.dumps(map_between_ip_and_category, indent=4))
-            category = int(input())
+            while True:
+                category = int(input())
+                if category > 4:
+                    print("Invalid Choice")
+                else:
+                    break
 
             print("Select mode of Payment")
             print(json.dumps(payment_modes, indent=4))
-            pay_mode = int(input())
+            while True:
+                pay_mode = int(input())
+                if pay_mode > 4:
+                     print("Invalid Choice")
+                else:
+                    break
 
             print("Enter Amount :",end='')
-            amount = int(input())
+            while True:
+                amount = int(input())
+                if amount < 0:
+                     print("Invalid amount")
+                else:
+                    break
 
             print("Any remarks :",end='')
             remarks = input()
@@ -119,19 +137,27 @@ def edit_account_details():
 
         try:
             while True:
-                account_details = {"type": '',
-                                   "name": '',
+                account_details = {"name": '',
                                    "balance": ''}
 
-                print("Enter account type(Savings/MF) : ",end='')
-                account_details["type"] = input()
-                print("Enter account Name : ",end='')
+                print("Enter account Name : ",end='')  # Check if the account with same name exists
                 account_details["name"] = input()
-                print("Enter account Balance : ",end='')
-                account_details["balance"] = input()
 
-                print(account_details)
-                collection.insert_one(account_details)
+                x = collection.find_one({"name": account_details["name"]})
+
+                if x is not None:
+                    print("Account Already exists")
+
+                else:
+                    print("Enter account Balance : ",end='')
+                    account_details["balance"] = int(input())
+
+                    if account_details["balance"] < 0:
+                        print("Invalid Balance. Please enter >=0  Value")
+
+                    print(account_details)
+                    collection.insert_one(account_details)
+
                 print("Enter ^C to Dashboard /\ Enter to add another account")
                 input()
 
@@ -165,10 +191,10 @@ def edit_account_details():
 def view_account_details():
     print(30*'*',"Account Summary",30*'*')
     collection = db['accounts']
-    print('{:20s}{:50s}{:6s}'.format("Account Type","Name","Balance"))
+    print('{:50s}{:6s}'.format("Name","Balance"))
     print(76*"-")
     for x in collection.find():
-        print('{:20s}{:50s}{:6s}'.format(str(x["type"]),str(x["name"]),str(x["balance"])))
+        print('{:50s}{:6s}'.format(str(x["name"]),str(x["balance"])))
 
 
 def view_spent_report():
@@ -177,9 +203,7 @@ def view_spent_report():
     month_year = today.strftime("%m_%Y")
     collection = db[month_year]
 
-
-
-    category_amount_dict={ "Food": 0,
+    category_amount_dict = { "Food": 0,
                           "Travelling":0,
                           "Health(Fruits/Meds)": 0,
                           "Groceries": 0,
@@ -193,7 +217,7 @@ def view_spent_report():
         for i in range(len(day["details"])): ## Traversing through all the entries of day
              for j in category_amount_dict.keys(): ## Traversing through all the categories of one entry
                  if j == day["details"][i]["category"]:
-                    category_amount_dict[j] += day["details"][i]["amount"]
+                    category_amount_dict[j] += int(day["details"][i]["amount"])
 
     total_spent = 0
     for x in category_amount_dict.values():
@@ -249,9 +273,8 @@ def view_expense_details_of_particular_day():
 
     collection = db[collection_name]
     x = collection.find_one({"date":user_date})
-    print(x)
 
-    if x == None:
+    if x is None:
         print("No Data available. Please enter today's expenses to see the results")
         return
 
@@ -268,10 +291,18 @@ def view_expense_details_of_particular_day():
 # For testing purpose only... Delete it afterwards
 def view_raw_db():
     collection = db["09_2019"]
-
     for x in collection.find():
         print(x)
         #print(json.dumps(x,indent=4))
+
+
+def clean_up():
+    collection = db["accounts"]
+
+    x= collection.delete_one({"name":"Aditya Birla Sun life Frontline Equity"})
+    print(x)
+    x = collection.delete_one({"name": "ICICI Prudential Value Discovery Fund"})
+    print(x)
 
 
 def start():
@@ -309,7 +340,6 @@ def start():
     print(60*"_-")
 
 
-
 try:
     while True:
         start()
@@ -322,3 +352,5 @@ except KeyboardInterrupt:
     print("Done..")
     sys.exit()
 
+#view_account_details()
+#clean_up()
