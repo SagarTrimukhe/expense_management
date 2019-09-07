@@ -320,7 +320,11 @@ def start():
 
     print()
     print("Enter your choice :: ",end='')
-    choice =int(input())
+    choice = input()
+    try:
+        choice = int(choice)
+    except:
+        print()
 
     if choice == 1:
         enter_expense_details()
