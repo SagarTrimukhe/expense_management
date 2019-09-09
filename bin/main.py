@@ -75,7 +75,7 @@ def enter_expense_details():
             print(json.dumps(map_between_ip_and_category, indent=4))
             while True:
                 category = int(input())
-                if category > 4:
+                if category > 9:
                     print("Invalid Choice")
                 else:
                     break
@@ -108,6 +108,11 @@ def enter_expense_details():
             collection = db['accounts']
 
             x = collection.find_one({"name": payment_modes[pay_mode]})
+
+            if x is None:
+                print("Account doesn't exists in the DB. Please add and Proceed")
+                return
+
             new_balance = int(x["balance"]) - amount
 
             query = {'name': payment_modes[pay_mode]}
@@ -288,6 +293,22 @@ def view_expense_details_of_particular_day():
         print('{:20s}{:20s}{:10s}{:40s}'.format(transaction["payment_mode"],transaction["category"],str(transaction["amount"]),transaction["remarks"]))
 
 
+def view_transaction_history():
+    today = date.today()
+    month_year = today.strftime("%m_%Y")
+    collection = db[month_year]
+
+    for x in collection.find():
+        print(x["date"])
+        print('{:20s}{:25s}{:10s}{:6s}{:40s}'.format("Payment Mode","Category","Amount","CB","Remarks"))
+        for i in x["details"]:
+            #print(json.dumps(i, indent=4))
+            print('{:20s}{:25s}{:10s}{:6s}{:40s}'.format(i["payment_mode"], i["category"], str(i["amount"]), str(i["closing_balance"]),
+                                                         i["remarks"]))
+        print("\n")
+
+    return
+
 # For testing purpose only... Delete it afterwards
 def view_raw_db():
     collection = db["09_2019"]
@@ -305,6 +326,7 @@ def clean_up():
     print(x)
 
 
+
 def start():
     print()
     print("----------------------------------Welcome to your Personal Expense Mangement Console-----------------------------------")
@@ -317,6 +339,7 @@ def start():
     print("4 - View Expenses of a Particular day")
     print("5 - View Total Expenses of current month")
     print("6 - View Account details")
+    print("7 - View Transaction History")
 
     print()
     print("Enter your choice :: ",end='')
@@ -338,6 +361,8 @@ def start():
         view_spent_report()
     elif choice == 6:
         view_account_details()
+    elif choice == 7:
+        view_transaction_history()
     else:
         print("Invalid choice")
 
@@ -355,6 +380,3 @@ except KeyboardInterrupt:
     subprocess.check_output("backup.bat", creationflags= 0x08000000)
     print("Done..")
     sys.exit()
-
-#view_account_details()
-#clean_up()
