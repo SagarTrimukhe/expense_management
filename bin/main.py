@@ -7,7 +7,7 @@ import subprocess
 
 
 client = pymongo.MongoClient("mongodb://localhost:27017")
-db = client["expense_management"]
+db = client["test_db"]
 
 
 def store_transactions(payment_mode, category, amount, new_balance, remarks):
@@ -297,6 +297,10 @@ def view_transaction_history():
     today = date.today()
     month_year = today.strftime("%m_%Y")
     collection = db[month_year]
+
+    x = collection.find_one()
+    if x is None:
+        print("No records found. Please insert some data")
 
     for x in collection.find():
         print(x["date"])
