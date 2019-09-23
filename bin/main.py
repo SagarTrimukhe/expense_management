@@ -472,20 +472,6 @@ def view_raw_db():
         #print(json.dumps(x,indent=4))
 
 
-def clean_up():
-    collection = db["accounts"]
-
-
-    x= collection.update({"name":"SBI"},{"name":"SBI","balance":5808,"wallet":"y"})
-    print(x)
-    x = collection.update({"name": "ICICI"}, {"name": "ICICI", "balance": 22770, "wallet": "y"})
-    print(x)
-    x = collection.update({"name": "Paytm"}, {"name": "Paytm", "balance": 965, "wallet": "y"})
-    print(x)
-    x = collection.update({"name": "CASH"}, {"name": "CASH", "balance": 990, "wallet": "y"})
-    print(x)
-    x = collection.update({"name": "PPF in ICICI Bank"}, {"name": "PPF in ICICI Bank", "balance": 3000, "wallet": "n"})
-    print(x)
 
 
 def start():
