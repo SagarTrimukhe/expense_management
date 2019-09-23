@@ -7,8 +7,8 @@ import subprocess
 
 
 client = pymongo.MongoClient("mongodb://localhost:27017")
-#db = client["expense_management"]
-db = client["test_db"]
+db = client["expense_management"]
+#db = client["test_db"]
 
 
 def store_transactions(payment_mode, category, amount, new_balance, remarks, user_date=''):
@@ -24,8 +24,6 @@ def store_transactions(payment_mode, category, amount, new_balance, remarks, use
         current_date = user_date
         month_year = user_date[3:5]+'_'+user_date[6:]
         collection = db[month_year]
-
-
 
 
     data = {"date": current_date,
@@ -73,12 +71,16 @@ def enter_expense_details():
         8: "Mobile",
         9: "Family"}
 
-    payment_modes = {1: "Paytm", 2: "SBI", 3: "CASH", 4: "ICICI"}
+    collection = db["accounts"]
+
+    payment_modes = {}
+
+    account_count = 1
+    for x in collection.find({"wallet":"y"},{"name":1}):
+        payment_modes[account_count] = x["name"]
+        account_count += 1
 
     ''''''''''''''' Taking Input from user'''''''''''''''''''''
-    category = ''
-    pay_mode = ''
-    amount = 0
     try:
         while True:
             print("Select Category: ")
@@ -99,7 +101,7 @@ def enter_expense_details():
                 else:
                     break
 
-            print("Enter Amount :",end='')
+            print("Enter Amount :", end='')
             while True:
                 amount = int(input())
                 if amount < 0:
@@ -107,7 +109,7 @@ def enter_expense_details():
                 else:
                     break
 
-            print("Any remarks :",end='')
+            print("Any remarks :", end='')
             remarks = input()
             ###############################################################
 
@@ -128,7 +130,7 @@ def enter_expense_details():
             query = {'name': payment_modes[pay_mode]}
             new_value = {"$set": {"balance": new_balance}}
 
-            collection.update_one(query,new_value)  ##Updating the balance
+            collection.update_one(query, new_value)  ##Updating the balance
 
             ##### Storing the information in file##############################
             store_transactions(payment_modes[pay_mode],map_between_ip_and_category[category], amount, new_balance, remarks)
@@ -163,17 +165,20 @@ def enter_expense_details_of_particular_day():
         8: "Mobile",
         9: "Family"}
 
-    payment_modes = {1: "Paytm", 2: "SBI", 3: "CASH", 4: "ICICI"}
+    payment_modes = {}
+
+    collection = db["accounts"]
+    account_count = 1
+    for x in collection.find({"wallet": "y"}, {"name": 1}):
+        payment_modes[account_count] = x["name"]
+        account_count += 1
 
     ''''''''''''''' Taking Input from user'''''''''''''''''''''
-    date = ''
-    category = ''
-    pay_mode = ''
-    amount = 0
+    print("Enter date in dd/mm/yyyy format")
+    user_date = input()
     try:
         while True:
-            print("Enter date in dd/mm/yyyy format")
-            date = input()
+
 
             print("Select Category: ")
             print(json.dumps(map_between_ip_and_category, indent=4))
@@ -209,8 +214,6 @@ def enter_expense_details_of_particular_day():
             expense_categories[map_between_ip_and_category[category]].append(remarks)
 
             ########### Updating Database balance ################################
-            collection = db['accounts']
-
             x = collection.find_one({"name": payment_modes[pay_mode]})
 
             if x is None:
@@ -226,13 +229,13 @@ def enter_expense_details_of_particular_day():
 
             ##### Storing the information in file##############################
             store_transactions(payment_modes[pay_mode], map_between_ip_and_category[category], amount, new_balance,
-                               remarks, date)
+                               remarks, user_date)
             print("Enter ^C to Dashboard  /*\  ENTER to add expenses")
             input()
 
     except KeyboardInterrupt:
-        #print("Today's Spent ::", json.dumps(expense_categories, indent=4, sort_keys=True))
         print()
+
 
 def edit_account_details():
     collection = db["accounts"]
@@ -255,7 +258,8 @@ def edit_account_details():
         try:
             while True:
                 account_details = {"name": '',
-                                   "balance": ''}
+                                   "balance": '',
+                                   "wallet": ''}
 
                 print("Enter account Name : ",end='')  # Check if the account with same name exists
                 account_details["name"] = input()
@@ -266,11 +270,18 @@ def edit_account_details():
                     print("Account Already exists")
 
                 else:
-                    print("Enter account Balance : ",end='')
-                    account_details["balance"] = int(input())
+                    while True:
+                        print("Enter account Balance : ", end='')
+                        account_details["balance"] = int(input())
 
-                    if account_details["balance"] < 0:
-                        print("Invalid Balance. Please enter >=0  Value")
+                        if account_details["balance"] < 0:
+                            print("Invalid Balance. Please enter >=0  Value. Try again")
+                        else:
+                            break
+
+                    print("Are you using this account as a wallet i.e. Do you spend the money for daily expenses(y/n)?")
+                    account_details["wallet"] = input()
+                    account_details["wallet"] = account_details["wallet"].lower()
 
                     print(account_details)
                     collection.insert_one(account_details)
@@ -295,7 +306,7 @@ def edit_account_details():
             print("Enter new balance: ",end='')
             new_balance = int(input())
             print(account_name,new_balance)
-            collection.update_one({"name":account_name},{'$set':{"balance":new_balance}})
+            collection.update_one({"name": account_name}, {'$set': {"balance": new_balance}})
             print("Balance Updated Successfully!!")
 
         except Exception as e:
@@ -326,20 +337,22 @@ def edit_account_details():
 def view_account_details():
     print(30*'*',"Account Summary",30*'*')
     collection = db['accounts']
-    print('{:50s}{:6s}'.format("Name","Balance"))
+    print('{:50s}{:10s}{:10s}'.format("Name","Balance","Wallet"))
     print(76*"-")
     for x in collection.find():
-        print('{:50s}{:6s}'.format(str(x["name"]),str(x["balance"])))
+        print('{:50s}{:10s}{:10s}'.format(str(x["name"]),str(x["balance"]),str(x["wallet"])))
 
 
 def view_spent_report():
-    print(30 * '*', "Expense Summary", 30 * '*')
     today = date.today()
     month_year = today.strftime("%m_%Y")
+
     collection = db[month_year]
 
-    category_amount_dict = { "Food": 0,
-                          "Travelling":0,
+    print(30 * '*', "Expense Summary of "+month_year, 30 * '*')
+
+    category_amount_dict = {"Food": 0,
+                          "Travelling": 0,
                           "Health(Fruits/Meds)": 0,
                           "Groceries": 0,
                           "Home(rent/water/EC)": 0,
@@ -358,9 +371,17 @@ def view_spent_report():
     for x in category_amount_dict.values():
         total_spent += x
 
+    sorted(category_amount_dict, key = category_amount_dict.values())
+
     print(json.dumps(category_amount_dict,indent = 5))
     print()
     print("Total: ",total_spent)
+
+
+
+
+
+    print("")
 
 
 def account_transfer():
@@ -445,7 +466,7 @@ def view_transaction_history():
 
 # For testing purpose only... Delete it afterwards
 def view_raw_db():
-    collection = db["09_2019"]
+    collection = db["accounts"]
     for x in collection.find():
         print(x)
         #print(json.dumps(x,indent=4))
@@ -454,11 +475,17 @@ def view_raw_db():
 def clean_up():
     collection = db["accounts"]
 
-    x= collection.delete_one({"name":"Aditya Birla Sun life Frontline Equity"})
-    print(x)
-    x = collection.delete_one({"name": "ICICI Prudential Value Discovery Fund"})
-    print(x)
 
+    x= collection.update({"name":"SBI"},{"name":"SBI","balance":5808,"wallet":"y"})
+    print(x)
+    x = collection.update({"name": "ICICI"}, {"name": "ICICI", "balance": 22770, "wallet": "y"})
+    print(x)
+    x = collection.update({"name": "Paytm"}, {"name": "Paytm", "balance": 965, "wallet": "y"})
+    print(x)
+    x = collection.update({"name": "CASH"}, {"name": "CASH", "balance": 990, "wallet": "y"})
+    print(x)
+    x = collection.update({"name": "PPF in ICICI Bank"}, {"name": "PPF in ICICI Bank", "balance": 3000, "wallet": "n"})
+    print(x)
 
 
 def start():
@@ -477,31 +504,27 @@ def start():
     print("8 - View Transaction History")
 
     print()
-    print("Enter your choice :: ",end='')
-    choice = input()
-    try:
-        choice = int(choice)
-    except:
-        print()
+    print("Enter your choice :: ", end='')
 
-    if choice == 1:
-        enter_expense_details()
-    elif choice == 2:
-        edit_account_details()
-    elif choice == 3:
-        account_transfer()
-    elif choice == 4:
-        enter_expense_details_of_particular_day()
-    elif choice == 5:
-        view_expense_details_of_particular_day()
-    elif choice == 6:
-        view_spent_report()
-    elif choice == 7:
-        view_account_details()
-    elif choice == 8:
-        view_transaction_history()
-    else:
-        print("Invalid choice")
+    choice_method_map = {
+        1: enter_expense_details,
+        2: edit_account_details,
+        3: account_transfer,
+        4: enter_expense_details_of_particular_day,
+        5: view_expense_details_of_particular_day,
+        6: view_spent_report,
+        7: view_account_details,
+        8: view_transaction_history
+    }
+
+
+    try:
+        choice = input()
+        choice = int(choice)
+        choice_method_map[choice]()
+
+    except Exception as e:
+        print(e)
 
     print(60*"_-")
 
@@ -514,10 +537,21 @@ try:
 except KeyboardInterrupt:
     print("Hold on...Backup is in Process!!")
     os.chdir("..\data")
-    #subprocess.check_output("backup.bat", creationflags= 0x08000000)
+    subprocess.check_output("backup.bat", creationflags= 0x08000000)
     print("Done..")
     sys.exit()
+
+
+#clean_up()
 
 #view_raw_db()
 
 #view_transaction_history()
+
+
+#enter_expense_details()
+
+#edit_account_details()
+
+#view_account_details()
+
