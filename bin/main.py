@@ -8,12 +8,12 @@ import subprocess
 
 client = pymongo.MongoClient("mongodb://localhost:27017")
 db = client["expense_management"]
-#db = client["test_db"]
+# db = client["test_db"]
 
 
 def store_transactions(payment_mode, category, amount, new_balance, remarks, user_date=''):
     # Creating a collection per month
-    ## Get the current date
+    # Get the current date
 
     today = date.today()
     current_date = today.strftime("%d/%m/%Y")
@@ -22,9 +22,9 @@ def store_transactions(payment_mode, category, amount, new_balance, remarks, use
 
     if user_date != '':
         current_date = user_date
-        month_year = user_date[3:5]+'_'+user_date[6:]
+        # month_year = user_date[3:5]+'_'+user_date[6:]
+        month_year = user_date[3:].replace("/", "_")
         collection = db[month_year]
-
 
     data = {"date": current_date,
             "details": []
@@ -38,14 +38,14 @@ def store_transactions(payment_mode, category, amount, new_balance, remarks, use
 
     check = collection.find_one({"date": current_date})
 
-    if check == None:
-        x = collection.insert_one(data)
-        x = collection.update_one({"date": current_date}, {"$set": {"details": [temp]}})
+    if check is None:
+        collection.insert_one(data)
+        collection.update_one({"date": current_date}, {"$set": {"details": [temp]}})
     else:
-        x = collection.find_one({"date":current_date})
-        list = x["details"]
-        list.append(temp)
-        x = collection.update_one({"date":current_date},{"$set":{"details":list}})
+        x = collection.find_one({"date": current_date})
+        previous_data = x["details"]
+        previous_data.append(temp)
+        collection.update_one({"date": current_date}, {"$set": {"details": list}})
 
 
 def enter_expense_details():
@@ -76,110 +76,16 @@ def enter_expense_details():
     payment_modes = {}
 
     account_count = 1
-    for x in collection.find({"wallet":"y"},{"name":1}):
-        payment_modes[account_count] = x["name"]
-        account_count += 1
-
-    ''''''''''''''' Taking Input from user'''''''''''''''''''''
-    try:
-        while True:
-            print("Select Category: ")
-            print(json.dumps(map_between_ip_and_category, indent=4))
-            while True:
-                category = int(input())
-                if category > 9:
-                    print("Invalid Choice")
-                else:
-                    break
-
-            print("Select mode of Payment")
-            print(json.dumps(payment_modes, indent=4))
-            while True:
-                pay_mode = int(input())
-                if pay_mode > 4:
-                     print("Invalid Choice")
-                else:
-                    break
-
-            print("Enter Amount :", end='')
-            while True:
-                amount = int(input())
-                if amount < 0:
-                     print("Invalid amount")
-                else:
-                    break
-
-            print("Any remarks :", end='')
-            remarks = input()
-            ###############################################################
-
-            expense_categories[map_between_ip_and_category[category]].append(amount)
-            expense_categories[map_between_ip_and_category[category]].append(remarks)
-
-            ########### Updating Database balance ################################
-            collection = db['accounts']
-
-            x = collection.find_one({"name": payment_modes[pay_mode]})
-
-            if x is None:
-                print("Account doesn't exists in the DB. Please add and Proceed")
-                return
-
-            new_balance = int(x["balance"]) - amount
-
-            query = {'name': payment_modes[pay_mode]}
-            new_value = {"$set": {"balance": new_balance}}
-
-            collection.update_one(query, new_value)  ##Updating the balance
-
-            ##### Storing the information in file##############################
-            store_transactions(payment_modes[pay_mode],map_between_ip_and_category[category], amount, new_balance, remarks)
-            print("Enter ^C to Dashboard  /*\  ENTER to add expenses")
-            input()
-
-    except KeyboardInterrupt:
-        #print("Today's Spent ::", json.dumps(expense_categories, indent=4, sort_keys=True))
-        print()
-
-
-def enter_expense_details_of_particular_day():
-    expense_categories = {"Food": [],
-                          "Travelling": [],
-                          "Health(Fruits/Meds)": [],
-                          "Groceries": [],
-                          "Home(rent/water/EC)": [],
-                          "Shopping": [],
-                          "Entertainment": [],
-                          "Mobile": [],
-                          "Family": []
-                          }
-
-    map_between_ip_and_category = {
-        1: "Food",
-        2: "Travelling",
-        3: "Health(Fruits/Meds)",
-        4: "Groceries",
-        5: "Home(rent/water/EC)",
-        6: "Shopping",
-        7: "Entertainment",
-        8: "Mobile",
-        9: "Family"}
-
-    payment_modes = {}
-
-    collection = db["accounts"]
-    account_count = 1
     for x in collection.find({"wallet": "y"}, {"name": 1}):
         payment_modes[account_count] = x["name"]
         account_count += 1
 
     ''''''''''''''' Taking Input from user'''''''''''''''''''''
-    print("Enter date in dd/mm/yyyy format")
-    user_date = input()
     try:
+        print("Press ENTER for today's date or Enter date in dd/mm/yyyy format")
+        user_date = input()
+
         while True:
-
-
             print("Select Category: ")
             print(json.dumps(map_between_ip_and_category, indent=4))
             while True:
@@ -213,7 +119,9 @@ def enter_expense_details_of_particular_day():
             expense_categories[map_between_ip_and_category[category]].append(amount)
             expense_categories[map_between_ip_and_category[category]].append(remarks)
 
-            ########### Updating Database balance ################################
+            # ########## Updating Database balance ############################### #
+            collection = db['accounts']
+
             x = collection.find_one({"name": payment_modes[pay_mode]})
 
             if x is None:
@@ -225,16 +133,46 @@ def enter_expense_details_of_particular_day():
             query = {'name': payment_modes[pay_mode]}
             new_value = {"$set": {"balance": new_balance}}
 
-            collection.update_one(query, new_value)  ##Updating the balance
+            collection.update_one(query, new_value)  # Updating the balance
 
-            ##### Storing the information in file##############################
-            store_transactions(payment_modes[pay_mode], map_between_ip_and_category[category], amount, new_balance,
-                               remarks, user_date)
-            print("Enter ^C to Dashboard  /*\  ENTER to add expenses")
+            # #### Calling the DB function to store the transaction ##############
+            store_transactions(payment_modes[pay_mode], map_between_ip_and_category[category], amount,
+                               new_balance, remarks, user_date)
+            print("Enter ^C to Dashboard  //*\\  ENTER to add expenses")
             input()
 
     except KeyboardInterrupt:
         print()
+
+
+def account_transfer():
+    collection = db["accounts"]
+
+    print(30 * '*', "Current Account Details", 30 * '*')
+    print('{:40s}{:6s}'.format("Account Name", "Balance"))
+    print(50 * '-')
+    for x in collection.find():
+        print('{:40s}{:6s}'.format(str(x["name"]), str(x["balance"])))
+
+    print("Enter source account: ", end='')
+    source = input()
+    print("Enter destination account: ", end='')
+    destination = input()
+
+    print("Enter amount: ", end='')
+    amount = int(input())  # add min balance checker
+
+    print("Transferring Rs.", amount, " from ", source, "to ", destination)
+
+    x = collection.find_one({"name": source})
+    new_balance = int(x["balance"]) - amount
+    collection.update_one({"name": source}, {"$set": {"balance": new_balance}})
+
+    x = collection.find_one({"name": destination})
+    new_balance = int(x["balance"]) + amount
+    collection.update_one({"name": destination}, {"$set": {"balance": new_balance}})
+
+    print("Transfer Successful!!")
 
 
 def edit_account_details():
@@ -261,7 +199,7 @@ def edit_account_details():
                                    "balance": '',
                                    "wallet": ''}
 
-                print("Enter account Name : ",end='')  # Check if the account with same name exists
+                print("Enter account Name : ", end='')  # Check if the account with same name exists
                 account_details["name"] = input()
 
                 x = collection.find_one({"name": account_details["name"]})
@@ -286,26 +224,26 @@ def edit_account_details():
                     print(account_details)
                     collection.insert_one(account_details)
 
-                print("Enter ^C to Dashboard /\ Enter to add another account")
+                print("Enter ^C to Dashboard //*\\ Enter to add another account")
                 input()
 
         except KeyboardInterrupt:
             print("Done")
 
     elif ch == 2:
-        print(30*'*',"Current Account Details",30*'*')
-        print('{:40s}{:6s}'.format("Account Name","Balance"))
+        print(30*'*', "Current Account Details", 30*'*')
+        print('{:40s}{:6s}'.format("Account Name", "Balance"))
         print(50*'-')
         for x in collection.find():
-            print('{:40s}{:6s}'.format(str(x["name"]),str(x["balance"])))
+            print('{:40s}{:6s}'.format(str(x["name"]), str(x["balance"])))
 
         print("Enter the account name:", end='')
         account_name = input()
 
         try:
-            print("Enter new balance: ",end='')
+            print("Enter new balance: ", end='')
             new_balance = int(input())
-            print(account_name,new_balance)
+            print(account_name, new_balance)
             collection.update_one({"name": account_name}, {'$set': {"balance": new_balance}})
             print("Balance Updated Successfully!!")
 
@@ -335,89 +273,66 @@ def edit_account_details():
 
 
 def view_account_details():
-    print(30*'*',"Account Summary",30*'*')
+    print(30*'*', "Account Summary", 30*'*')
     collection = db['accounts']
-    print('{:50s}{:10s}{:10s}'.format("Name","Balance","Wallet"))
+    print('{:50s}{:10s}{:10s}'.format("Name", "Balance", "Wallet"))
     print(76*"-")
     for x in collection.find():
-        print('{:50s}{:10s}{:10s}'.format(str(x["name"]),str(x["balance"]),str(x["wallet"])))
+        print('{:50s}{:10s}{:10s}'.format(str(x["name"]), str(x["balance"]), str(x["wallet"])))
 
 
-def view_spent_report():
-    today = date.today()
-    month_year = today.strftime("%m_%Y")
+def view_spent_report_of_month():
+
+    print("Press ENTER to view details of Current month or else Enter (mm/yyyy)")
+    month_year = input()
+
+    if month_year == '':
+        today = date.today()
+        month_year = today.strftime("%m_%Y")
+
+    else:
+        month_year = month_year.replace("/", "_")
 
     collection = db[month_year]
 
-    print(30 * '*', "Expense Summary of "+month_year, 30 * '*')
+    category_amount_dict = {"Food": [0, 0],
+                            "Travelling": [0, 0],
+                            "Health(Fruits/Meds)": [0, 0],
+                            "Groceries": [0, 0],
+                            "Home(rent/water/EC)": [0, 0],
+                            "Shopping": [0, 0],
+                            "Entertainment": [0, 0],
+                            "Mobile": [0, 0],
+                            "Family": [0, 0]}
 
-    category_amount_dict = {"Food": 0,
-                          "Travelling": 0,
-                          "Health(Fruits/Meds)": 0,
-                          "Groceries": 0,
-                          "Home(rent/water/EC)": 0,
-                          "Shopping": 0,
-                          "Entertainment": 0,
-                          "Mobile": 0,
-                          "Family": 0}
-
-    for day in collection.find():  ## Traversing through all the days of month
-        for i in range(len(day["details"])): ## Traversing through all the entries of day
-             for j in category_amount_dict.keys(): ## Traversing through all the categories of one entry
-                 if j == day["details"][i]["category"]:
-                    category_amount_dict[j] += int(day["details"][i]["amount"])
+    for day in collection.find():                         # Traversing through all the days of month
+        for i in range(len(day["details"])):              # Traversing through all the entries of day
+            for j in category_amount_dict.keys():        # Traversing through all the categories of one entry
+                if j == day["details"][i]["category"]:
+                    category_amount_dict[j][0] += int(day["details"][i]["amount"])
 
     total_spent = 0
     for x in category_amount_dict.values():
-        total_spent += x
+        total_spent += x[0]
 
-    sorted(category_amount_dict, key = category_amount_dict.values())
+    for x in category_amount_dict.values():
+        x[1] = (x[0]/total_spent)*100
 
-    print(json.dumps(category_amount_dict,indent = 5))
-    print()
-    print("Total: ",total_spent)
+    print(30 * '*', "Expense Summary of " + month_year, 30 * '*')
+    print('{:40s}{:10s}{:6s}'.format("Category", "Amount", "Percentage"))
+    for x in category_amount_dict.keys():
+        print('{:40s}{:10s}{:6.2f}'.format(x, str(category_amount_dict[x][0]), category_amount_dict[x][1]))
 
-
-
-
-
-    print("")
-
-
-def account_transfer():
-    collection = db["accounts"]
-
-    print(30 * '*', "Current Account Details", 30 * '*')
-    print('{:40s}{:6s}'.format("Account Name", "Balance"))
     print(50 * '-')
-    for x in collection.find():
-        print('{:40s}{:6s}'.format(str(x["name"]), str(x["balance"])))
-
-    print("Enter source account: ",end='')
-    source = input()
-    print("Enter destination account: ",end='')
-    destination = input()
-
-    print("Enter amount: ",end='')
-    amount = int(input())  ## add min balance checker
-
-    print("Transferring Rs.", amount, " from ", source, "to ", destination)
-
-    x = collection.find_one({"name":source})
-    new_balance = int(x["balance"]) - amount
-    collection.update_one({"name":source},{"$set":{"balance":new_balance}})
-
-    x = collection.find_one({"name": destination})
-    new_balance = int(x["balance"]) + amount
-    collection.update_one({"name": destination}, {"$set": {"balance": new_balance}})
-
-    print("Transfer Successful!!")
+    print()
+    print("Total: ", total_spent)
+    print()
 
 
 def view_expense_details_of_particular_day():
-    collection_name  = date.today().strftime("%m_%Y")
+    collection_name = date.today().strftime("%m_%Y")
     today = date.today().strftime("%d/%m/%Y")
-    #today = "03/09/2019"
+    # today = "03/09/2019"
 
     print("Press ENTER to see today's details or Enter date in (dd/mm/yyyy) format : ", end='')
     user_date = input()
@@ -428,7 +343,7 @@ def view_expense_details_of_particular_day():
         collection_name = user_date[3:5]+'_'+user_date[6:]
 
     collection = db[collection_name]
-    x = collection.find_one({"date":user_date})
+    x = collection.find_one({"date": user_date})
 
     if x is None:
         print("No Data available. Please enter today's expenses to see the results")
@@ -437,11 +352,12 @@ def view_expense_details_of_particular_day():
     details = x["details"]
 
     print(20 * '*', "Today's Expense Details", 20 * '*')
-    print('{:20s}{:20s}{:10s}{:40s}'.format("Payment Mode","Category","Amount","Remarks"))
+    print('{:20s}{:20s}{:10s}{:40s}'.format("Payment Mode", "Category", " Amount", "Remarks"))
     print(65*'-')
 
     for transaction in details:
-        print('{:20s}{:20s}{:10s}{:40s}'.format(transaction["payment_mode"],transaction["category"],str(transaction["amount"]),transaction["remarks"]))
+        print('{:20s}{:20s}{:10s}{:40s}'.format(transaction["payment_mode"], transaction["category"],
+                                                str(transaction["amount"]), transaction["remarks"]))
 
 
 def view_transaction_history():
@@ -455,23 +371,21 @@ def view_transaction_history():
 
     for x in collection.find().sort([("date", 1)]):
         print(x["date"])
-        print('{:20s}{:25s}{:10s}{:6s}{:40s}'.format("Payment Mode","Category","Amount","CB","Remarks"))
+        print('{:20s}{:25s}{:10s}{:6s}{:40s}'.format("Payment Mode", "Category", "Amount", "CB", "Remarks"))
         for i in x["details"]:
-            #print(json.dumps(i, indent=4))
-            print('{:20s}{:25s}{:10s}{:6s}{:40s}'.format(i["payment_mode"], i["category"], str(i["amount"]), str(i["closing_balance"]),
-                                                         i["remarks"]))
+            print('{:20s}{:25s}{:10s}{:6s}{:40s}'.format(i["payment_mode"], i["category"], str(i["amount"]),
+                                                         str(i["closing_balance"]), i["remarks"]))
         print("\n")
 
     return
+
 
 # For testing purpose only... Delete it afterwards
 def view_raw_db():
     collection = db["accounts"]
     for x in collection.find():
         print(x)
-        #print(json.dumps(x,indent=4))
-
-
+        # print(json.dumps(x,indent=4))
 
 
 def start():
@@ -480,14 +394,13 @@ def start():
     print()
     print("*******************Dashboard*******************")
 
-    print("1 - Enter todays's Expenses")
+    print("1 - Enter Expenses")
     print("2 - Edit Account details ")
     print("3 - Account Transfer")
-    print("4 - Enter another day's Expenses")
-    print("5 - View Expenses of a Particular day")
-    print("6 - View Total Expenses of current month")
-    print("7 - View Account details")
-    print("8 - View Transaction History")
+    print("4 - View Expenses of a Particular day")
+    print("5 - View Total Expenses of current month")
+    print("6 - View Account details")
+    print("7 - View Transaction History")
 
     print()
     print("Enter your choice :: ", end='')
@@ -496,13 +409,11 @@ def start():
         1: enter_expense_details,
         2: edit_account_details,
         3: account_transfer,
-        4: enter_expense_details_of_particular_day,
-        5: view_expense_details_of_particular_day,
-        6: view_spent_report,
-        7: view_account_details,
-        8: view_transaction_history
+        4: view_expense_details_of_particular_day,
+        5: view_spent_report_of_month(),
+        6: view_account_details,
+        7: view_transaction_history
     }
-
 
     try:
         choice = input()
@@ -518,26 +429,11 @@ def start():
 try:
     while True:
         start()
-        print("Enter ^C to Quit  /*\  ENTER to Continue")
+        print("Enter ^C to Quit  //*\\  ENTER to Continue")
         input()
 except KeyboardInterrupt:
     print("Hold on...Backup is in Process!!")
-    os.chdir("..\data")
-    subprocess.check_output("backup.bat", creationflags= 0x08000000)
+    os.chdir("..\\data")
+    subprocess.check_output("backup.bat", creationflags=0x08000000)
     print("Done..")
     sys.exit()
-
-
-#clean_up()
-
-#view_raw_db()
-
-#view_transaction_history()
-
-
-#enter_expense_details()
-
-#edit_account_details()
-
-#view_account_details()
-
